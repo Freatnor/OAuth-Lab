@@ -12,11 +12,21 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 public class LoginActivity extends AppCompatActivity {
     WebView mWebView;
 
     private final String YOUR_AUTHORIZATION_URL = "https://api.twitter.com/oauth/request_token"; //ENTER YOUR AUTHORIZATION URL HERE
-    private final String AUTHORIZATION_STRING = "OAuth ";
+
+    private final String USER_LOGIN_URL = "https://api.twitter.com/oauth/authenticate?oauth_token=";
+    private final String VERIFIER_STRING = "oauth_verifier=";
 
     private static final String TAG = "LoginActivity";
 
@@ -28,6 +38,8 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         mWebView = (WebView) findViewById(R.id.webview);
+        
+        getOAuthTokens():
 
         mWebView.setWebViewClient(new WebViewClient() {
 
@@ -41,14 +53,14 @@ public class LoginActivity extends AppCompatActivity {
             */
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                if(url.contains("code=")){ //CHECKING TO SEE IF THE URL WE HAVE IS THE ONE WE WANT
+                if(url.contains(VERIFIER_STRING)){ //CHECKING TO SEE IF THE URL WE HAVE IS THE ONE WE WANT
                     Log.i(TAG, "shouldOverrideUrlLoading: " + url);
 
-                    int index = url.indexOf("=");
-                    Log.i(TAG, url.substring(index+1));
+                    int index = url.indexOf(VERIFIER_STRING);
+                    Log.i(TAG, url.substring(index+1+VERIFIER_STRING.length()));
 
                     //STRIPPING AWAY THE URL AND ONLY KEEPING THE CODE
-                    String code = url.substring(index+1);
+                    String code = url.substring(index+1+VERIFIER_STRING.length());
                     getAccessToken(code);
                     return true;
                 }
@@ -58,26 +70,28 @@ public class LoginActivity extends AppCompatActivity {
             }
 
         });
-        mWebView.loadUrl(YOUR_AUTHORIZATION_URL); //WHAT DO YOU THINK THE URL SHOULD BE?
+        mWebView.loadUrl(USER_LOGIN_URL + TwitterAppData.OAUTH_TOKEN); //WHAT DO YOU THINK THE URL SHOULD BE?
 
+    }
+
+    private void getOAuthTokens() {
     }
 
     /**
      * WE WILL WORK ON THIS TOGETHER
-     * @param code THE CODE WE RETRIEVED FROM THE REDIRECT URL
+     * @param verifier THE OAUTH_VERIFIER WE RETRIEVED FROM THE REDIRECT URL
      */
-    private void getAccessToken(String code){
+    private void getAccessToken(String verifier){
         //WE'LL WORK ON THIS TOGETHER
         OkHttpClient client = new OkHttpClient();
         RequestBody formBody = new FormBody.Builder()
-                .add("client_id", InstagramAppData.CLIENT_ID)
-                .add("client_secret", InstagramAppData.CLIENT_SECRET)
-                .add("grant_type", "authorization_code")
-                .add("redirect_uri", InstagramAppData.CALLBACK_URL)
-                .add("code", code)
+                .add("oauth_verifier", verifier)
                 .build();
         Request request = new Request.Builder()
-                .url("https://api.instagram.com/oauth/access_token")
+                .url("https://api.twitter.com/oauth/access_token")
+                .addHeader("authorization", TwitterAppData.buildAuthorizationHeader())
+                .addHeader("content-type", "application/x-www-form-urlencoded")
+                .addHeader("content-length", "" + ("oauth_verifier".length() + verifier.length() + 1))
                 .post(formBody)
                 .build();
         client.newCall(request).enqueue(new Callback() {
