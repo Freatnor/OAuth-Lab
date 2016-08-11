@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">OAuth-Lab</string>
+    <string name="shared_preferences">twitter_oath_lab_shared_preferences</string>
 </resources>
