@@ -12,6 +12,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.TreeMap;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -58,11 +59,15 @@ public class LoginActivity extends AppCompatActivity {
     //change for the initial oauth request
     private void getOAuthTokens() {
         OkHttpClient client = new OkHttpClient();
+        RequestBody body = new FormBody.Builder()
+                .add("oauth_callback", TwitterAppData.REQUEST_TOKEN_URL)
+                .build();
         Request request = new Request.Builder()
                 .url(TwitterAppData.REQUEST_TOKEN_URL)
-                .addHeader("authorization", TwitterAppData.buildAuthorizationHeader())
+                .addHeader("authorization", TwitterAppData.buildAuthorizationHeader(true, new TreeMap<String, String>(),
+                        "POST", TwitterAppData.REQUEST_TOKEN_URL, this))
                 .addHeader("content-type", "application/x-www-form-urlencoded")
-                .post(null)
+                .post(body)
                 .build();
         client.newCall(request).enqueue(new Callback() {
             @Override
@@ -83,8 +88,15 @@ public class LoginActivity extends AppCompatActivity {
                     //get the new token and secret
                     int tokenIndex = body.indexOf(OAUTH_STRING);
                     int secretIndex = body.indexOf(OAUTH_SECRET_STRING);
-                    TwitterAppData.OAUTH_TOKEN = body.substring(tokenIndex+OAUTH_STRING.length(), secretIndex - 1);
-                    TwitterAppData.OAUTH_TOKEN_SECRET = body.substring(secretIndex + OAUTH_SECRET_STRING.length(), CALLBACK_STRING.length() - 1);
+
+                    String oauth_token = body.substring(tokenIndex+OAUTH_STRING.length(), secretIndex - 1);
+                    String oauth_token_secret = body.substring(secretIndex + OAUTH_SECRET_STRING.length(), CALLBACK_STRING.length() - 1);
+                    Log.d(TAG, "onResponse: oauth_token = " + oauth_token);
+                    Log.d(TAG, "onResponse: oauth_token_secret = " + oauth_token_secret);
+                    mPreferences.edit().putString(TwitterAppData.TRUE_OAUTH_TOKEN, oauth_token)
+                            .putString(TwitterAppData.TRUE_OAUTH_TOKEN_SECRET, oauth_token_secret)
+                            .commit();
+
 
                     mWebView.setWebViewClient(new WebViewClient() {
                         @Override
@@ -106,7 +118,7 @@ public class LoginActivity extends AppCompatActivity {
                         }
 
                     });
-                    mWebView.loadUrl(USER_LOGIN_URL + TwitterAppData.OAUTH_TOKEN); //WHAT DO YOU THINK THE URL SHOULD BE?
+                    mWebView.loadUrl(USER_LOGIN_URL + mPreferences.getString(TwitterAppData.TRUE_OAUTH_TOKEN, null));
 
                 }
                 else{
@@ -127,7 +139,7 @@ public class LoginActivity extends AppCompatActivity {
                 .build();
         Request request = new Request.Builder()
                 .url("https://api.twitter.com/oauth/access_token")
-                .addHeader("authorization", TwitterAppData.buildAuthorizationHeader())
+//                .addHeader("authorization", TwitterAppData.buildAuthorizationHeader())
                 .addHeader("content-type", "application/x-www-form-urlencoded")
                 .addHeader("content-length", "" + ("oauth_verifier".length() + verifier.length() + 1))
                 .post(formBody)
@@ -147,17 +159,17 @@ public class LoginActivity extends AppCompatActivity {
                 Log.i(TAG, "onResponse: " + body);
                 String token = "";
                 String secret = "";
-                if(body.contains(OAUTH_STRING)&&body.contains(OAUTH_SECRET_STRING)){
-                    //get the new token and secret
-                    int tokenIndex = body.indexOf(OAUTH_STRING);
-                    int secretIndex = body.indexOf(OAUTH_SECRET_STRING);
-                    TwitterAppData.TRUE_OAUTH_TOKEN = body.substring(tokenIndex+OAUTH_STRING.length(), secretIndex - 1);
-                    TwitterAppData.TRUE_OAUTH_TOKEN_SECRET = body.substring(secretIndex + OAUTH_SECRET_STRING.length());
-
-                }
-                else{
-                    Log.e(TAG, "onResponse: bad response, no token or secret");
-                }
+//                if(body.contains(OAUTH_STRING)&&body.contains(OAUTH_SECRET_STRING)){
+//                    //get the new token and secret
+//                    int tokenIndex = body.indexOf(OAUTH_STRING);
+//                    int secretIndex = body.indexOf(OAUTH_SECRET_STRING);
+//                    TwitterAppData.TRUE_OAUTH_TOKEN = body.substring(tokenIndex+OAUTH_STRING.length(), secretIndex - 1);
+//                    TwitterAppData.TRUE_OAUTH_TOKEN_SECRET = body.substring(secretIndex + OAUTH_SECRET_STRING.length());
+//
+//                }
+//                else{
+//                    Log.e(TAG, "onResponse: bad response, no token or secret");
+//                }
 
                 startActivity(new Intent(LoginActivity.this, MainActivity.class));
             }

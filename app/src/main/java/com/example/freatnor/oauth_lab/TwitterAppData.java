@@ -103,26 +103,28 @@ public class TwitterAppData {
             String key = iter.next();
             //if the key is for oauth
             if(key.contains("oauth")){
-                finalHeader += (key + "=" + parameters.get(key) + ", ");
+                finalHeader += (key + "=\"" + parameters.get(key) + "\", ");
             }
         }
-
-
+        //remove trailing ", "
+        finalHeader = finalHeader.substring(0, finalHeader.length() - 2);
+        Log.d(TAG, "buildAuthorizationHeader: final header! - " + finalHeader);
+        return finalHeader;
     }
 
     private static void createSignature(TreeMap<String, String> parameters) throws UnsupportedEncodingException {
         String baseSignature = parameters.get("method") + "&" + parameters.get("url") + "&";
-        String signature;
+        String signature = null;
 
         //loop through and concatenate
         Iterator<String> iter = parameters.keySet().iterator();
         while(iter.hasNext()){
             String key = iter.next();
             if(!key.equals("method") && !key.equals("url") && !key.equals("signing_key")){
-                baseSignature += (key + "=" + parameters.get(key) + "&";
+                baseSignature += (key + "=" + parameters.get(key) + "&");
             }
         }
-        baseSignature = baseSignature.substring(0, baseSignature.length() -2);
+
         Log.d(TAG, "createSignature: created base signature - " + baseSignature);
 
         //HmacUtils.hmacSha1Hex(key, string_to_sign);
@@ -132,7 +134,13 @@ public class TwitterAppData {
             Mac mac = Mac.getInstance("HmacSHA1");
             mac.init(secretKey);
             byte[] hmacData = mac.doFinal(baseSignature.getBytes("UTF-8"));
-            parameters.put("oauth_signature", Base64.encodeToString(hmacData, Base64.NO_WRAP));
+            String hexFormat = "";
+            for (int i = 0; i < hmacData.length; i++) {
+                hexFormat += String.format("%02x", hmacData[i]);
+            }
+            Log.d(TAG, "createSignature: signature after encoding in HMAC-SHA1 - " + String.format("%02x", hexFormat));
+            signature = Base64.encodeToString(hmacData, Base64.NO_WRAP);
+
         } catch (NoSuchAlgorithmException e){
             Log.e(TAG, "createSignature: bad algorithm", e);
         } catch (InvalidKeyException e){
